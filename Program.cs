@@ -1,10 +1,10 @@
 ﻿using System.Net.Sockets;
 
-var tasks = Enumerable.Range(1, 2013).Select(GetNumberAsync).ToArray();
+var tasks = Enumerable.Range(1, 2018).Select(GetNumberAsync).ToArray();
 var numbers = await Task.WhenAll(tasks);
 var median = CalculateMedian(numbers);
 
-Console.WriteLine($"Median: {median}"); // 4925512
+Console.WriteLine($"Median: {median}"); // 4925680.5
 
 async Task<int> GetNumberAsync(int number)
 {
@@ -17,7 +17,7 @@ async Task<string> GetValidResponseAsync(int number)
 {
     while (true)
     {
-        var result = await SendDataAsync(number);
+        var result = await SendMessageAsync($"{number}\n");
         var ok = result != null && result.Contains("\n");
         if (ok)
         {
@@ -26,14 +26,14 @@ async Task<string> GetValidResponseAsync(int number)
     }
 }
 
-async Task<string?> SendDataAsync(int data)
+async Task<string?> SendMessageAsync(string message)
 {
     try
     {
         using var client = new TcpClient("88.212.241.115", 2013);
         using var stream = client.GetStream();
         using var writer = new StreamWriter(stream);
-        await writer.WriteAsync($"{data}\n");
+        await writer.WriteAsync(message);
         await writer.FlushAsync();
 
         using var reader = new StreamReader(stream);
@@ -45,8 +45,11 @@ async Task<string?> SendDataAsync(int data)
     }
 }
 
-static int CalculateMedian(IEnumerable<int> list)
+static double CalculateMedian(IEnumerable<int> list)
 {
     var sorted = list.OrderBy(x => x).ToArray();
-    return sorted[sorted.Length / 2];
+    var a = sorted[sorted.Length / 2 - 1];
+    var b = sorted[sorted.Length / 2];
+    
+    return (a + b) / 2.0;
 }
