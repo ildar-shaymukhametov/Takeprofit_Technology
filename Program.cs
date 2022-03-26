@@ -4,23 +4,47 @@ using System.Text;
 
 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
-try
+var max = 50;
+var tasks = Enumerable.Range(1, max).Select(CreateTask);
+var numbers = await Task.WhenAll(tasks);
+var sortedNumbers = numbers.OrderBy(x => x).ToList();
+
+if (sortedNumbers.Count != max)
 {
-    var tasks = Enumerable.Range(1, 2018).Select(CreateTask);
-    var result = await Task.WhenAll(tasks);
-}
-catch (SocketException e)
-{
-    Console.WriteLine("SocketException: {0}", e);
-}
-catch (Exception e)
-{
-    Console.WriteLine("Exception: {0}", e);
+    throw new Exception($"Wrong number of items: {sortedNumbers.Count}");
 }
 
-Console.WriteLine("Запрос завершен...");
+var a = sortedNumbers[max / 2];
+var b = sortedNumbers[max / 2 + 1];
+var median = (a + b) / 2;
+
+Console.WriteLine($"Median: {median}");
 
 async Task<int> CreateTask(int number)
+{
+    var response = await GetValidResponseAsync(number);
+    var numbers = new string(response.Where(char.IsDigit).ToArray());
+    var result = int.Parse(numbers);
+
+    System.Console.WriteLine($"{number}: {result}");
+    return result;
+}
+
+async Task<string> GetValidResponseAsync(int number)
+{
+    var result = string.Empty;
+    var isValid = false;
+
+    do
+    {
+        result = await SendNumberAsync(number);
+        isValid = result != null && result.Contains("\n");
+    } while (!isValid);
+
+    return result;
+}
+
+async Task<string?> SendNumberAsync(int number)
 {
     try
     {
@@ -31,17 +55,12 @@ async Task<int> CreateTask(int number)
         await writer.FlushAsync();
 
         using var reader = new StreamReader(stream);
-        var line = await reader.ReadToEndAsync();
-        var numberString = new string(line?.Where(char.IsDigit).ToArray());
+        var result = await reader.ReadToEndAsync();
 
-        int.TryParse(numberString, out int result);
-
-        System.Console.WriteLine($"{number}: {result} ({line}) ({numberString})");
         return result;
     }
-    catch (System.Exception ex)
+    catch
     {
-        System.Console.WriteLine($"{number}: {ex}");
-        return 0;
+        return null;
     }
 }
