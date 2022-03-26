@@ -1,22 +1,14 @@
-﻿using System.Net;
-using System.Net.Sockets;
-using System.Text;
+﻿using System.Net.Sockets;
 
-Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-
-var max = 50;
-var tasks = Enumerable.Range(1, max).Select(CreateTask);
+var tasks = Enumerable.Range(1, 2013).Select(CreateTask).ToArray();
 var numbers = await Task.WhenAll(tasks);
-var sortedNumbers = numbers.OrderBy(x => x).ToList();
 
-if (sortedNumbers.Count != max)
+if (numbers.Length != 2013)
 {
-    throw new Exception($"Wrong number of items: {sortedNumbers.Count}");
+    throw new Exception($"Wrong number of items: {numbers.Length}");
 }
 
-var a = sortedNumbers[max / 2];
-var b = sortedNumbers[max / 2 + 1];
-var median = (a + b) / 2;
+var median = CalculateMedian(numbers);
 
 Console.WriteLine($"Median: {median}");
 
@@ -32,16 +24,15 @@ async Task<int> CreateTask(int number)
 
 async Task<string> GetValidResponseAsync(int number)
 {
-    var result = string.Empty;
-    var isValid = false;
-
-    do
+    while (true)
     {
-        result = await SendNumberAsync(number);
-        isValid = result != null && result.Contains("\n");
-    } while (!isValid);
-
-    return result;
+        var response = await SendNumberAsync(number);
+        var ok = response != null && response.Contains("\n");
+        if (ok)
+        {
+            return response;
+        }
+    }
 }
 
 async Task<string?> SendNumberAsync(int number)
@@ -63,4 +54,14 @@ async Task<string?> SendNumberAsync(int number)
     {
         return null;
     }
+}
+
+static int CalculateMedian(IEnumerable<int> list)
+{
+    var sorted = list.OrderBy(x => x).ToArray();
+    var a = sorted[sorted.Length / 2];
+    var b = sorted[sorted.Length / 2 + 1];
+    var result = (a + b) / 2;
+
+    return result;
 }
